@@ -1,36 +1,42 @@
-# Student Result Predictor — CodePipeline EC2 Deploy Action (No CodeDeploy)
+# Student Result Predictor — Docker on EC2 with CodePipeline EC2 Deploy action
 
-Adapted to the supplied reference: GitHub → CodePipeline V2 → Amazon EC2 Deploy action via Systems Manager (SSM). No CodeDeploy agent, appspec.yml, Docker, or GitHub Actions is used in this version.
+This version runs the Flask/ML app inside a Docker container on EC2 and uses the supplied reference workflow: GitHub → AWS CodePipeline V2 → Amazon EC2 Deploy action via Systems Manager (SSM). No CodeDeploy agent or appspec.yml is used.
 
 ## Files
-- `train.py`: trains the demo model and saves model version with it.
-- `app.py`: Flask application.
+- `train.py`: trains the model and saves model version.
+- `app.py`: Flask web application.
 - `templates/index.html`: prediction form.
 - `requirements.txt`: Python dependencies.
-- `deploy-scripts/deploy.sh`: installs dependencies, trains the model, and restarts the service.
+- `Dockerfile`: builds the app image and trains the model during image build.
+- `deploy-scripts/deploy.sh`: builds the image and replaces the running container.
 
-## AWS setup summary
-1. Upload all files to GitHub repository `ml-app`, branch `main`.
-2. Launch Ubuntu EC2; tag `Name = EC2DeployDemo`.
-3. Security group: SSH 22 restricted to your IP; HTTP 80 open to `0.0.0.0/0`.
-4. Attach EC2 IAM role with `AmazonSSMManagedInstanceCore` and `AmazonS3ReadOnlyAccess`.
-5. Wait for the instance to show Online in Systems Manager Fleet Manager.
-6. Create CodePipeline V2 with GitHub (via GitHub App) as Source; skip Build and Test.
-7. Select Amazon EC2 as Deploy provider and configure:
-   - Instance type: EC2
-   - Instance tag key: `Name`
-   - Instance tag value: `EC2DeployDemo`
-   - Target directory: `/home/ubuntu/ml-app`
-   - Post-script: `deploy-scripts/deploy.sh`
-8. If the first deployment fails with access denied, inspect the pipeline service role permissions as described in the reference.
+## GitHub
+Upload all files/folders to repository `ml-app`, branch `main`.
 
-## Verify automatic deployment
-Open `http://YOUR_EC2_PUBLIC_IP`. To test version 2.0, change `MODEL_VERSION = "1.0"` to `MODEL_VERSION = "2.0"` in `train.py`, commit to `main`, wait for CodePipeline to finish, then refresh the page.
+## EC2 prerequisites
+Launch Ubuntu EC2, tag it `Name = EC2DeployDemo`. Security group inbound rules: SSH (22) from your IP; HTTP (80) from `0.0.0.0/0`. Attach an EC2 IAM role with `AmazonSSMManagedInstanceCore` and `AmazonS3ReadOnlyAccess`. Wait until Systems Manager Fleet Manager shows the instance Online.
 
-Troubleshooting:
+Docker must be installed on EC2 before the pipeline deploys. Connect to EC2 and run:
 ```bash
-sudo systemctl status ml-app
-sudo journalctl -u ml-app -n 50
+sudo apt update
+sudo apt install -y docker.io git
+sudo systemctl enable --now docker
+sudo mkdir -p /home/ubuntu/ml-app
+sudo chown -R ubuntu:ubuntu /home/ubuntu/ml-app
 ```
+The EC2 Deploy action will place the repository revision in `/home/ubuntu/ml-app`.
 
-The sample dataset is synthetic and not suitable for real student grading. AWS resources may incur charges; delete the pipeline, artifact bucket, and EC2 after evaluation.
+## CodePipeline
+Create a V2 pipeline with GitHub (via GitHub App) Source, skip Build and Test, then choose Amazon EC2 as Deploy provider:
+- Instance type: EC2
+- Instance tag key: `Name`
+- Instance tag value: `EC2DeployDemo`
+- Target directory: `/home/ubuntu/ml-app`
+- Post-script: `deploy-scripts/deploy.sh`
+
+If the EC2 Deploy action cannot find Docker, confirm Docker is installed and that the script runs with sufficient privileges. The reference action's post-script runs on the instance; if the action does not execute as root, use `sudo docker` commands in the script or configure permissions appropriately.
+
+## Automatic deployment test
+Open `http://YOUR_EC2_PUBLIC_IP`. Change `MODEL_VERSION = "1.0"` to `"2.0"` in `train.py`, commit to `main`, wait for CodePipeline to succeed, and refresh the page. Each deployment rebuilds the image, retrains the model, and replaces the container.
+
+This uses synthetic demonstration data, not validated for real student grading. AWS resources may incur charges; clean up after evaluation.

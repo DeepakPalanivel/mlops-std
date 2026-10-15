@@ -4,7 +4,7 @@ from sklearn.tree import DecisionTreeClassifier
 # Change to "2.0" and commit to demonstrate automatic deployment.
 MODEL_VERSION = "1.0"
 
-# Demo data: [study hours/day, attendance %, internal marks out of 50]
+# Demo data: study hours/day, attendance %, internal marks out of 50
 X = [
     [1, 40, 10], [2, 50, 15], [2, 60, 20], [3, 65, 25],
     [4, 70, 30], [5, 75, 35], [6, 80, 40], [7, 90, 45],
