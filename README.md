@@ -1,42 +1,75 @@
-# Student Result Predictor — Docker on EC2 with CodePipeline EC2 Deploy action
+# Student Result Processing System
 
-This version runs the Flask/ML app inside a Docker container on EC2 and uses the supplied reference workflow: GitHub → AWS CodePipeline V2 → Amazon EC2 Deploy action via Systems Manager (SSM). No CodeDeploy agent or appspec.yml is used.
+A modular command-line application for processing student results using Go.
 
-## Files
-- `train.py`: trains the model and saves model version.
-- `app.py`: Flask web application.
-- `templates/index.html`: prediction form.
-- `requirements.txt`: Python dependencies.
-- `Dockerfile`: builds the app image and trains the model during image build.
-- `deploy-scripts/deploy.sh`: builds the image and replaces the running container.
+## 1. Project Overview
 
-## GitHub
-Upload all files/folders to repository `ml-app`, branch `main`.
+The application accepts student details and marks for five subjects. It calculates the total, average, percentage, grade, and pass/fail status.
 
-## EC2 prerequisites
-Launch Ubuntu EC2, tag it `Name = EC2DeployDemo`. Security group inbound rules: SSH (22) from your IP; HTTP (80) from `0.0.0.0/0`. Attach an EC2 IAM role with `AmazonSSMManagedInstanceCore` and `AmazonS3ReadOnlyAccess`. Wait until Systems Manager Fleet Manager shows the instance Online.
+## 2. Objectives
 
-Docker must be installed on EC2 before the pipeline deploys. Connect to EC2 and run:
-```bash
-sudo apt update
-sudo apt install -y docker.io git
-sudo systemctl enable --now docker
-sudo mkdir -p /home/ubuntu/ml-app
-sudo chown -R ubuntu:ubuntu /home/ubuntu/ml-app
+- Develop a command-line application using Go.
+- Apply structs, arrays, slices, loops, functions, and packages.
+- Organize the application into modules.
+- Validate student details and subject marks.
+- Use Git and GitHub for version control.
+
+## 3. Technologies Used
+
+- Go programming language
+- Visual Studio Code
+- Git
+- GitHub
+
+## 4. Project Structure
+
+```text
+StudentResultProcessor/
+├── main.go
+├── go.mod
+├── README.md
+├── models/
+│   └── student.go
+└── result/
+    └── processor.go
 ```
-The EC2 Deploy action will place the repository revision in `/home/ubuntu/ml-app`.
 
-## CodePipeline
-Create a V2 pipeline with GitHub (via GitHub App) Source, skip Build and Test, then choose Amazon EC2 as Deploy provider:
-- Instance type: EC2
-- Instance tag key: `Name`
-- Instance tag value: `EC2DeployDemo`
-- Target directory: `/home/ubuntu/ml-app`
-- Post-script: `deploy-scripts/deploy.sh`
+## 5. Features
 
-If the EC2 Deploy action cannot find Docker, confirm Docker is installed and that the script runs with sufficient privileges. The reference action's post-script runs on the instance; if the action does not execute as root, use `sudo docker` commands in the script or configure permissions appropriately.
+- Processes multiple students in one run.
+- Accepts marks for five subjects.
+- Validates marks between 0 and 100.
+- Calculates total, average, and percentage.
+- Assigns grades based on percentage.
+- Marks a student as FAIL if any subject mark is below 35.
 
-## Automatic deployment test
-Open `http://YOUR_EC2_PUBLIC_IP`. Change `MODEL_VERSION = "1.0"` to `"2.0"` in `train.py`, commit to `main`, wait for CodePipeline to succeed, and refresh the page. Each deployment rebuilds the image, retrains the model, and replaces the container.
+## 6. Grade Criteria
 
-This uses synthetic demonstration data, not validated for real student grading. AWS resources may incur charges; clean up after evaluation.
+| Percentage | Grade |
+|---|---|
+| 90–100 | A+ |
+| 80–89.99 | A |
+| 70–79.99 | B |
+| 60–69.99 | C |
+| 50–59.99 | D |
+| Below 50 | F |
+
+A student must score at least 35 in every subject to pass.
+
+## 7. How to Run
+
+Ensure Go is installed, open a terminal in the project directory, and execute:
+
+```bash
+go run .
+```
+
+Follow the prompts to enter the student details and subject marks.
+
+## 8. Testing
+
+Test with valid marks, boundary values (0 and 100), invalid input, and marks below 35. Record the actual results produced by the program.
+
+## 9. Conclusion
+
+This project demonstrates Go programming, modular application design, student result processing, and Git/GitHub version control.
